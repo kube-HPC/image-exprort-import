@@ -21,11 +21,18 @@ const loadToRegistry = async (path,registry) => {
             try {
                 const loadData = await docker.command(`load -i ${path}/${item}`);
                 const image = loadData.raw.split('Loaded image: ')[1].split('\n')[0]
+                console.log(`try tag and push ${image}`);
                 const res = await docker.command(`tag ${image} ${registry}/${image}`)
-                console.log(res);
+                try {
+                    const push = await docker.command(`push ${registry}/${image}`)
+                    
+                } catch (error) {
+                    console.log(`fail on push to image ${image} with error:${error}`);
+                }
+              
     
             } catch (error) {
-                console.log(`error in ${image}: ${error}`)
+                console.log(`error: ${error}`)
             }
         })
     }

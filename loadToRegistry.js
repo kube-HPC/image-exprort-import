@@ -16,6 +16,7 @@ const getFilesFromFolder = path => {
 const loadToRegistry = async (path,registry) => {
     console.log('##############33 path',path);
     const items = await getFilesFromFolder(path) 
+    let counter =items.length +1;
     if(items){
         items.forEach(async item => {
             try {
@@ -23,8 +24,10 @@ const loadToRegistry = async (path,registry) => {
                 const image = loadData.raw.split('Loaded image: ')[1].split('\n')[0]
                 console.log(`try tag and push ${image}`);
                 const res = await docker.command(`tag ${image} ${registry}/${image}`)
+                counter = counter -1 ;
                 try {
                     const push = await docker.command(`push ${registry}/${image}`)
+                    console.log(`success tag and push ${image} left ${counter} `);
                     
                 } catch (error) {
                     console.log(`fail on push to image ${image} with error:${error}`);

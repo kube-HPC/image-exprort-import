@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "pkg app.js --target=linux -o image-export-import"
+    "build": "./node_modules/.bin/pkg app.js --targets=linux -o image-export-import"
   },
   "keywords": [],
   "author": "",
@@ -15,5 +15,8 @@
     "fs-extra": "^7.0.0",
     "js-yaml": "^3.12.0",
     "yargs": "^12.0.2"
+  },
+  "devDependencies": {
+    "pkg": "^4.3.4"
   }
 }

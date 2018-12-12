@@ -1,6 +1,7 @@
 const fs = require('fs-extra');
 const jsyaml = require('js-yaml');
 const { Docker } = require('docker-cli-js');
+const syncSpawn = require('./helpers/sync-spawn');
 const docker = new Docker();
 const _createImageName = ({ registry, namespace, repository, tag }, ignoreTag) => {
     let array = [registry, namespace, repository];
@@ -30,6 +31,7 @@ const exportFromRegistry = async (outFolder, versionsFile) => {
             const fileName = fullImageName.replace(/[\/:]/gi, '_')
             await docker.command(`pull ${fullImageName}`)
             await docker.command(`save -o ${outFolder}/${versions[0].systemversion}/${fileName}.tar ${fullImageName}`)
+            await syncSpawn('gzip',`${outFolder}/${versions[0].systemversion}/${fileName}.tar`);
             console.log(JSON.stringify({
                 file: `${fileName}.tar`,
                 ...(image.image)

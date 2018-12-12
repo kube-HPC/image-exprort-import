@@ -30,7 +30,7 @@ const options = {
 yargs
     .command('load', 'load Data To Regsitry', options.loadDataToRegsitry,
         (argv) => loadToRegistry(argv.path, argv.registry))
-    .command('export', 'exports containers to regsitry', options.exportFromRegistry,
+    .command('export', 'exports containers from regsitry', options.exportFromRegistry,
         (argv) => exportFromRegistry(argv.path, argv.semver))
     .help().argv
 

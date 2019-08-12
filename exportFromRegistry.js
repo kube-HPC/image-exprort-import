@@ -4,7 +4,8 @@ const { Docker } = require('docker-cli-js');
 const syncSpawn = require('./helpers/sync-spawn');
 const objectPath = require('object-path');
 const merge = require('lodash.merge');
-
+const uniqBy = require('lodash.uniqby');
+const { coreImages } = require('./images');
 const docker = new Docker();
 const _createImageName = ({ registry, namespace, repository, tag }, ignoreTag) => {
     let array = [registry, namespace, repository];
@@ -53,7 +54,8 @@ const exportFromRegistry = async (outFolder, versionsFile) => {
     const imageList = []
     console.log(`Downloading version ${versions[0].systemversion} to ${outFolder}`)
     await fs.mkdirp(`${outFolder}/${versions[0].systemversion}`);
-    const images = Object.entries(versions[0]).filter(([k, v]) => v.image).map(([k, v]) => ({ name: k, image: v.image }));
+    let images = Object.entries(versions[0]).filter(([k, v]) => v.image).map(([k, v]) => ({ name: k, image: v.image }));
+    images = images.concat(...coreImages)
     let counter = images.length + 1;
     images.forEach(async (image, i) => {
         try {
@@ -76,15 +78,15 @@ const exportFromRegistry = async (outFolder, versionsFile) => {
     })
 }
 
-const exportThirdparty = async (outFolder, helmChartFolder, registry) => {
+const exportThirdparty = async (outFolder, helmChartFolder, registry, production = true) => {
     try {
         const outFileName = '/tmp/thirdPartyHelm.yaml';
         const outStream = fs.createWriteStream(outFileName);
-        await syncSpawn('helm', `template --name hkube --set global.production=true ${helmChartFolder}`, undefined, { stdout: outStream });
+        await syncSpawn('helm', `template --name hkube --set global.production=${production} ${helmChartFolder}`, undefined, { stdout: outStream });
         let fileContents = fs.readFileSync(outFileName, 'utf8');
         fileContents = fileContents.replace(/^---(?!$)/gm, '---\r\n')
         const yml = jsyaml.safeLoadAll(fileContents);
-        const images = [];
+        let images = [];
         for (y of yml) {
             if (!y) {
                 continue;
@@ -167,6 +169,7 @@ const exportThirdparty = async (outFolder, helmChartFolder, registry) => {
             })
         }
         await fs.mkdirp(`${outFolder}/thirdparty`);
+        images = uniqBy(images,i=>i.fullImageName);
         let counter = images.length + 1;
         images.forEach(async (image, i) => {
             try {

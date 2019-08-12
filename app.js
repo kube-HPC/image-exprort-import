@@ -11,7 +11,7 @@ const options = {
         },
         registry: {
             alias: 'r',
-            default: 'private.registry.rms'
+            default: ''
         }
     },
     exportFromRegistry: {
@@ -25,7 +25,7 @@ const options = {
         },
         registry: {
             alias: 'r',
-            default: 'private.registry.rms'
+            default: ''
         }
     },
     exportThirdParty: {
@@ -37,7 +37,10 @@ const options = {
         },
         registry: {
             alias: 'r',
-            default: 'private.registry.rms'
+            default: ''
+        },
+        production: {
+            default: true
         }
     }
 
@@ -47,7 +50,7 @@ yargs
     .command('load', 'load Data To Regsitry', options.loadDataToRegsitry,
         (argv) => loadToRegistry(argv.path, argv.registry))
     .command('exportThirdparty', 'exports thirdparty containers from regsitry', options.exportThirdParty,
-        (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry))
+        (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry, argv.production))
     .command('export', 'exports containers from regsitry', options.exportFromRegistry,
         (argv) => exportFromRegistry(argv.path, argv.semver, argv.registry))
     .help().argv

@@ -48,17 +48,35 @@ const _parseImageName = (image) => {
     return result
 }
 
-const exportFromRegistry = async (outFolder, versionsFile) => {
+const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersionsFile) => {
     const fileContents = fs.readFileSync(versionsFile, 'utf8');
     const versions = jsyaml.loadAll(fileContents);
+    let prevVersions = null;
+    if (prevVersionsFile) {
+        const prevFileContents = fs.readFileSync(prevVersionsFile, 'utf8');
+        prevVersions = jsyaml.loadAll(prevFileContents);
+
+    }
     const imageList = []
     console.log(`Downloading version ${versions[0].systemversion} to ${outFolder}`)
+    if (prevVersions) {
+        console.log(`Comparing to version ${prevVersions[0].systemversion}`)
+    }
     await fs.mkdirp(`${outFolder}/${versions[0].systemversion}`);
     let images = Object.entries(versions[0]).filter(([k, v]) => v.image).map(([k, v]) => ({ name: k, image: v.image }));
     images = images.concat(...coreImages)
     let counter = images.length + 1;
     images.forEach(async (image, i) => {
         try {
+            if (prevVersions && prevVersions[0]){
+                const prev = prevVersions[0][image.name];
+                if (prev){
+                    if (prev.image.repository === image.image.repository && prev.image.tag === image.image.tag){
+                        console.log(`skipping ${image.name} as its version ${image.image.tag} has not changed`)
+                        return;
+                    }
+                }
+            }
             const fullImageName = _createImageName(image.image);
             console.log(`starts ${fullImageName} ${i}/${images.length}`)
             const fileName = fullImageName.replace(/[\/:]/gi, '_')
@@ -169,7 +187,7 @@ const exportThirdparty = async (outFolder, helmChartFolder, registry, production
             })
         }
         await fs.mkdirp(`${outFolder}/thirdparty`);
-        images = uniqBy(images,i=>i.fullImageName);
+        images = uniqBy(images, i => i.fullImageName);
         let counter = images.length + 1;
         images.forEach(async (image, i) => {
             try {

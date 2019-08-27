@@ -23,6 +23,9 @@ const options = {
             alias: 'v',
             describe: 'provide a path to versions file'
         },
+        prevVersion:{
+            describe: 'path to previous versions file for diff'
+        },
         registry: {
             alias: 'r',
             default: ''
@@ -52,7 +55,7 @@ yargs
     .command('exportThirdparty', 'exports thirdparty containers from regsitry', options.exportThirdParty,
         (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry, argv.production))
     .command('export', 'exports containers from regsitry', options.exportFromRegistry,
-        (argv) => exportFromRegistry(argv.path, argv.semver, argv.registry))
+        (argv) => exportFromRegistry(argv.path, argv.semver, argv.registry, argv.prevVersion))
     .help().argv
 
 

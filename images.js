@@ -2,7 +2,7 @@ const coreImages = [
     {
         image:{
             repository:'hkube/python-env',
-            tag:'1.1.84'
+            tag:'1.1.87'
         },
         name: 'python-env'
     },
@@ -12,6 +12,13 @@ const coreImages = [
             tag:'1.1.84'
         },
         name: 'nodejs-env'
+    },
+    {
+        image:{
+            repository:'hkube/base-node',
+            tag:'v1.1.1'
+        },
+        name: 'base-node'
     }
 ]
 module.exports={

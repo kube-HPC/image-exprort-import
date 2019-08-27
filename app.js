@@ -38,6 +38,9 @@ const options = {
         chartPath: {
             describe: 'provide a path to thirdparty chart path'
         },
+        prevChartPath:{
+            describe: 'path to previous versions file for diff'
+        },
         registry: {
             alias: 'r',
             default: ''
@@ -53,7 +56,7 @@ yargs
     .command('load', 'load Data To Regsitry', options.loadDataToRegsitry,
         (argv) => loadToRegistry(argv.path, argv.registry))
     .command('exportThirdparty', 'exports thirdparty containers from regsitry', options.exportThirdParty,
-        (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry, argv.production))
+        (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry, argv.production, argv.prevChartPath))
     .command('export', 'exports containers from regsitry', options.exportFromRegistry,
         (argv) => exportFromRegistry(argv.path, argv.semver, argv.registry, argv.prevVersion))
     .help().argv

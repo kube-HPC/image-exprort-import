@@ -12,7 +12,7 @@ const _spawn = async (command, args, options, { stdout, stderr } = {}) => {
         start.stdout.pipe(stdout);
     }
     start.stdout.on('data', (data) => {
-        console.log(data.toString());
+        // console.log(data.toString());
     });
     if (stderr) {
         start.stderr.pipe(stderr);

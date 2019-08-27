@@ -68,10 +68,10 @@ const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersion
     let counter = images.length + 1;
     images.forEach(async (image, i) => {
         try {
-            if (prevVersions && prevVersions[0]){
+            if (prevVersions && prevVersions[0]) {
                 const prev = prevVersions[0][image.name];
-                if (prev){
-                    if (prev.image.repository === image.image.repository && prev.image.tag === image.image.tag){
+                if (prev) {
+                    if (prev.image.repository === image.image.repository && prev.image.tag === image.image.tag) {
                         console.log(`skipping ${image.name} as its version ${image.image.tag} has not changed`)
                         return;
                     }
@@ -96,7 +96,93 @@ const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersion
     })
 }
 
-const exportThirdparty = async (outFolder, helmChartFolder, registry, production = true) => {
+const _getThirdpartyVersions=(yml,registry)=>{
+    let images = [];
+    for (y of yml) {
+        if (!y) {
+            continue;
+        }
+
+        const containers = [];
+        if (y.kind === 'EtcdCluster') {
+            // special handling of etcd operator object
+            const version = objectPath.get(y, 'spec.version');
+            const repository = objectPath.get(y, 'spec.repository', 'quay.io/coreos/etcd');
+            if (version && repository) {
+                const image = `${repository}:${version}`;
+                const imageParsed = _parseImageName(image);
+                const x = merge(imageParsed, { registry })
+                const container = {
+                    image: `${repository}:v${version}`,
+                    paths: [
+                        {
+                            path: 'spec.version',
+                            value: version
+                        },
+                        {
+                            path: 'spec.repository',
+                            value: _createImageName(x, true)
+                        }
+                    ]
+                }
+                containers.push(container);
+            }
+
+            const busyboxImage = objectPath.get(y, 'spec.pod.busyboxImage', 'busybox:1.28.0-glibc');
+            if (busyboxImage) {
+                const image = busyboxImage;
+                const imageParsed = _parseImageName(image);
+                const x = merge(imageParsed, { registry })
+                const container = {
+                    image,
+                    paths: [
+                        {
+                            path: 'spec.pod.busyboxImage',
+                            value: _createImageName(x)
+                        }
+                    ]
+                }
+                containers.push(container);
+            }
+        }
+        else {
+            let containersFromYaml = objectPath.get(y, 'spec.template.spec.containers');
+            if (!containersFromYaml) {
+                containersFromYaml = objectPath.get(y, 'spec.jobTemplate.spec.template.spec.containers');
+            }
+            if (!containersFromYaml) {
+                containersFromYaml = objectPath.get(y, 'spec.containers');
+            }
+            if (containersFromYaml) {
+                containers.push(...containersFromYaml);
+            }
+        }
+        if (containers.length === 0) {
+            continue;
+        }
+
+        containers.forEach(c => {
+            const imageParsed = _parseImageName(c.image);
+            const imageName = imageParsed.repository;
+            const x = merge(imageParsed, { registry, fullImageName: c.image })
+            if (y.kind === 'EtcdCluster') {
+                c.paths.forEach(p => {
+                    objectPath.set(y, p.path, p.value);
+                })
+            }
+            else {
+                const forImageName = merge(imageParsed, { registry });
+                c.image = _createImageName(forImageName)
+            }
+            images.push(x);
+            // console.log(`service ${imageName}. found version ${imageParsed.tag}`)
+            return;
+        })
+    }
+    images = uniqBy(images, i => i.fullImageName);
+    return images;
+}
+const exportThirdparty = async (outFolder, helmChartFolder, registry, production = true, prevChartPath = null) => {
     try {
         const outFileName = '/tmp/thirdPartyHelm.yaml';
         const outStream = fs.createWriteStream(outFileName);
@@ -104,103 +190,34 @@ const exportThirdparty = async (outFolder, helmChartFolder, registry, production
         let fileContents = fs.readFileSync(outFileName, 'utf8');
         fileContents = fileContents.replace(/^---(?!$)/gm, '---\r\n')
         const yml = jsyaml.safeLoadAll(fileContents);
-        let images = [];
-        for (y of yml) {
-            if (!y) {
-                continue;
-            }
-
-            const containers = [];
-            if (y.kind === 'EtcdCluster') {
-                // special handling of etcd operator object
-                const version = objectPath.get(y, 'spec.version');
-                const repository = objectPath.get(y, 'spec.repository', 'quay.io/coreos/etcd');
-                if (version && repository) {
-                    const image = `${repository}:${version}`;
-                    const imageParsed = _parseImageName(image);
-                    const x = merge(imageParsed, { registry })
-                    const container = {
-                        image: `${repository}:v${version}`,
-                        paths: [
-                            {
-                                path: 'spec.version',
-                                value: version
-                            },
-                            {
-                                path: 'spec.repository',
-                                value: _createImageName(x, true)
-                            }
-                        ]
-                    }
-                    containers.push(container);
-                }
-
-                const busyboxImage = objectPath.get(y, 'spec.pod.busyboxImage', 'busybox:1.28.0-glibc');
-                if (busyboxImage) {
-                    const image = busyboxImage;
-                    const imageParsed = _parseImageName(image);
-                    const x = merge(imageParsed, { registry })
-                    const container = {
-                        image,
-                        paths: [
-                            {
-                                path: 'spec.pod.busyboxImage',
-                                value: _createImageName(x)
-                            }
-                        ]
-                    }
-                    containers.push(container);
-                }
-            }
-            else {
-                let containersFromYaml = objectPath.get(y, 'spec.template.spec.containers');
-                if (!containersFromYaml) {
-                    containersFromYaml = objectPath.get(y, 'spec.jobTemplate.spec.template.spec.containers');
-                }
-                if (!containersFromYaml) {
-                    containersFromYaml = objectPath.get(y, 'spec.containers');
-                }
-                if (containersFromYaml) {
-                    containers.push(...containersFromYaml);
-                }
-            }
-            if (containers.length === 0) {
-                continue;
-            }
-
-            containers.forEach(c => {
-                const imageParsed = _parseImageName(c.image);
-                const imageName = imageParsed.repository;
-                const x = merge(imageParsed, { registry, fullImageName: c.image })
-                if (y.kind === 'EtcdCluster') {
-                    c.paths.forEach(p => {
-                        objectPath.set(y, p.path, p.value);
-                    })
-                }
-                else {
-                    const forImageName = merge(imageParsed, { registry });
-                    c.image = _createImageName(forImageName)
-                }
-                images.push(x);
-                console.log(`service ${imageName}. found version ${imageParsed.tag}`)
-                return;
-            })
+        let prevYml = null;
+        if (prevChartPath) {
+            const prevoutFileName = '/tmp/thirdPartyHelm.yaml';
+            const prevoutStream = fs.createWriteStream(prevoutFileName);
+            await syncSpawn('helm', `template --name hkube --set global.production=${production} ${prevChartPath}`, undefined, { stdout: prevoutStream });
+            let prevfileContents = fs.readFileSync(prevoutFileName, 'utf8');
+            prevfileContents = prevfileContents.replace(/^---(?!$)/gm, '---\r\n')
+            prevYml = jsyaml.safeLoadAll(prevfileContents);
         }
+        const imagesNew = _getThirdpartyVersions(yml,registry);
+        const prevImages = _getThirdpartyVersions(prevYml,registry);
+        const images = imagesNew.filter(i=>!prevImages.find(pi=>i.fullname===pi.fullname));
+        const skippedImages = imagesNew.filter(i=>prevImages.find(pi=>i.fullname===pi.fullname));
+        images.forEach(i=>console.log(`found ${i.fullname}`));
+        skippedImages.forEach(i=>console.log(`skipped ${i.fullname}`));
+
         await fs.mkdirp(`${outFolder}/thirdparty`);
-        images = uniqBy(images, i => i.fullImageName);
+        
         let counter = images.length + 1;
         images.forEach(async (image, i) => {
             try {
                 const fullImageName = image.fullImageName;
+
                 console.log(`starts ${fullImageName} ${i}/${images.length}`)
                 const fileName = fullImageName.replace(/[\/:]/gi, '_')
                 await docker.command(`pull ${fullImageName}`)
                 await docker.command(`save -o ${outFolder}/thirdparty/${fileName}.tar ${fullImageName}`)
                 await syncSpawn('gzip', `${outFolder}/thirdparty/${fileName}.tar`);
-                console.log(JSON.stringify({
-                    file: `${fileName}.tgz`,
-                    ...(image.image)
-                }))
                 counter = counter - 1;
                 console.log(`finish ${fullImageName} ${i}/${images.length} left ${counter}`)
             } catch (error) {
@@ -208,7 +225,6 @@ const exportThirdparty = async (outFolder, helmChartFolder, registry, production
                 counter = counter - 1;
             }
         })
-        console.log(images)
     } catch (error) {
         console.log(error)
     }

@@ -2,7 +2,7 @@ const coreImages = [
     {
         image:{
             repository:'hkube/python-env',
-            tag:'1.1.87'
+            tag:'1.1.88'
         },
         name: 'python-env'
     },

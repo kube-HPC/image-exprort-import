@@ -98,6 +98,9 @@ const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersion
 
 const _getThirdpartyVersions=(yml,registry)=>{
     let images = [];
+    if (!yml){
+        return images;
+    }
     for (y of yml) {
         if (!y) {
             continue;

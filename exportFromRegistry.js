@@ -48,7 +48,7 @@ const _parseImageName = (image) => {
     return result
 }
 
-const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersionsFile) => {
+const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersionsFile, dryrun = false) => {
     const fileContents = fs.readFileSync(versionsFile, 'utf8');
     const versions = jsyaml.loadAll(fileContents);
     let prevVersions = null;
@@ -80,15 +80,23 @@ const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersion
             const fullImageName = _createImageName(image.image);
             console.log(`starts ${fullImageName} ${i}/${images.length}`)
             const fileName = fullImageName.replace(/[\/:]/gi, '_')
-            await docker.command(`pull ${fullImageName}`)
-            await docker.command(`save -o ${outFolder}/${versions[0].systemversion}/${fileName}.tar ${fullImageName}`)
-            await syncSpawn('gzip', `${outFolder}/${versions[0].systemversion}/${fileName}.tar`);
-            console.log(JSON.stringify({
-                file: `${fileName}.tar`,
-                ...(image.image)
-            }))
-            counter = counter - 1;
-            console.log(`finish ${fullImageName} ${i}/${images.length} left ${counter}`)
+            if (dryrun) {
+                console.log(`docker pull ${fullImageName}`);
+                console.log(`docker save -o ${outFolder}/${versions[0].systemversion}/${fileName}.tar ${fullImageName}`)
+                console.log(`gzip ${outFolder}/${versions[0].systemversion}/${fileName}.tar`)
+            }
+            else {
+
+                await docker.command(`pull ${fullImageName}`)
+                await docker.command(`save -o ${outFolder}/${versions[0].systemversion}/${fileName}.tar ${fullImageName}`)
+                await syncSpawn('gzip', `${outFolder}/${versions[0].systemversion}/${fileName}.tar`);
+                console.log(JSON.stringify({
+                    file: `${fileName}.tar`,
+                    ...(image.image)
+                }))
+                counter = counter - 1;
+                console.log(`finish ${fullImageName} ${i}/${images.length} left ${counter}`)
+            }
         } catch (error) {
             console.log(error)
             counter = counter - 1;
@@ -96,9 +104,9 @@ const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersion
     })
 }
 
-const _getThirdpartyVersions=(yml,registry)=>{
+const _getThirdpartyVersions = (yml, registry) => {
     let images = [];
-    if (!yml){
+    if (!yml) {
         return images;
     }
     for (y of yml) {
@@ -185,7 +193,7 @@ const _getThirdpartyVersions=(yml,registry)=>{
     images = uniqBy(images, i => i.fullImageName);
     return images;
 }
-const exportThirdparty = async (outFolder, helmChartFolder, registry, production = true, prevChartPath = null) => {
+const exportThirdparty = async (outFolder, helmChartFolder, registry, production = true, prevChartPath = null, dryrun = false) => {
     try {
         const outFileName = '/tmp/thirdPartyHelm.yaml';
         const outStream = fs.createWriteStream(outFileName);
@@ -202,15 +210,15 @@ const exportThirdparty = async (outFolder, helmChartFolder, registry, production
             prevfileContents = prevfileContents.replace(/^---(?!$)/gm, '---\r\n')
             prevYml = jsyaml.safeLoadAll(prevfileContents);
         }
-        const imagesNew = _getThirdpartyVersions(yml,registry);
-        const prevImages = _getThirdpartyVersions(prevYml,registry);
-        const images = imagesNew.filter(i=>!prevImages.find(pi=>i.fullname===pi.fullname));
-        const skippedImages = imagesNew.filter(i=>prevImages.find(pi=>i.fullname===pi.fullname));
-        images.forEach(i=>console.log(`found ${i.fullname}`));
-        skippedImages.forEach(i=>console.log(`skipped ${i.fullname}`));
+        const imagesNew = _getThirdpartyVersions(yml, registry);
+        const prevImages = _getThirdpartyVersions(prevYml, registry);
+        const images = imagesNew.filter(i => !prevImages.find(pi => i.fullname === pi.fullname));
+        const skippedImages = imagesNew.filter(i => prevImages.find(pi => i.fullname === pi.fullname));
+        images.forEach(i => console.log(`found ${i.fullname}`));
+        skippedImages.forEach(i => console.log(`skipped ${i.fullname}`));
 
         await fs.mkdirp(`${outFolder}/thirdparty`);
-        
+
         let counter = images.length + 1;
         images.forEach(async (image, i) => {
             try {

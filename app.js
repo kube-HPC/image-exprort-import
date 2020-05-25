@@ -29,6 +29,9 @@ const options = {
         registry: {
             alias: 'r',
             default: ''
+        },
+        dryrun: {
+            alias: 'd',
         }
     },
     exportThirdParty: {
@@ -47,6 +50,9 @@ const options = {
         },
         production: {
             default: true
+        },
+        dryrun: {
+            alias: 'd',
         }
     }
 
@@ -56,9 +62,9 @@ yargs
     .command('load', 'load Data To Regsitry', options.loadDataToRegsitry,
         (argv) => loadToRegistry(argv.path, argv.registry))
     .command('exportThirdparty', 'exports thirdparty containers from regsitry', options.exportThirdParty,
-        (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry, argv.production, argv.prevChartPath))
+        (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry, argv.production, argv.prevChartPath, args.dryrun))
     .command('export', 'exports containers from regsitry', options.exportFromRegistry,
-        (argv) => exportFromRegistry(argv.path, argv.semver, argv.registry, argv.prevVersion))
+        (argv) => exportFromRegistry(argv.path, argv.semver, argv.registry, argv.prevVersion, args.dryrun))
     .help().argv
 
 

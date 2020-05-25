@@ -62,9 +62,9 @@ yargs
     .command('load', 'load Data To Regsitry', options.loadDataToRegsitry,
         (argv) => loadToRegistry(argv.path, argv.registry))
     .command('exportThirdparty', 'exports thirdparty containers from regsitry', options.exportThirdParty,
-        (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry, argv.production, argv.prevChartPath, args.dryrun))
+        (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry, argv.production, argv.prevChartPath, argv.dryrun))
     .command('export', 'exports containers from regsitry', options.exportFromRegistry,
-        (argv) => exportFromRegistry(argv.path, argv.semver, argv.registry, argv.prevVersion, args.dryrun))
+        (argv) => exportFromRegistry(argv.path, argv.semver, argv.registry, argv.prevVersion, argv.dryrun))
     .help().argv
 
 

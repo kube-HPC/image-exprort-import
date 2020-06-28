@@ -1,5 +1,7 @@
 const fs = require('fs-extra');
 const jsyaml = require('js-yaml');
+const path = require('path');
+const tempy = require('tempy');
 const { Docker } = require('docker-cli-js');
 const syncSpawn = require('./helpers/sync-spawn');
 const objectPath = require('object-path');
@@ -193,22 +195,36 @@ const _getThirdpartyVersions = (yml, registry) => {
     images = uniqBy(images, i => i.fullImageName);
     return images;
 }
-const exportThirdparty = async (outFolder, helmChartFolder, registry, production = true, prevChartPath = null, dryrun = false) => {
+const _getYamlFromChart = async (helmChartFolder, options) => {
     try {
-        const outFileName = '/tmp/thirdPartyHelm.yaml';
+        const outFileName = tempy.file();
         const outStream = fs.createWriteStream(outFileName);
-        await syncSpawn('helm', `template --name hkube --set global.production=${production} ${helmChartFolder}`, undefined, { stdout: outStream });
+        const setOptions = options.split(',').map(s => `--set ${s}`).join(' ');
+        await syncSpawn('helm', `template hkube ${setOptions} ${helmChartFolder}`, undefined, { stdout: outStream });
         let fileContents = fs.readFileSync(outFileName, 'utf8');
         fileContents = fileContents.replace(/^---(?!$)/gm, '---\r\n')
         const yml = jsyaml.safeLoadAll(fileContents);
+        return yml;
+    } catch (e) {
+        console.log(e)
+        return []
+    }
+};
+
+const _getYamlsFromChartsFolder = async (helmChartFolder, options) =>{
+    const chartsFolder = path.join(helmChartFolder, 'charts');
+    const thirdpartyFolders = await fs.readdir(chartsFolder);
+    const yamls = await Promise.all(thirdpartyFolders.map(f => _getYamlFromChart(path.join(chartsFolder, f), options)));
+    const yml = [].concat(...yamls)
+    return yml;
+};
+
+const exportThirdparty = async (outFolder, helmChartFolder, registry, options = '', prevChartPath = null) => {
+    try {
+        const yml = await _getYamlsFromChartsFolder(helmChartFolder,options);
         let prevYml = null;
         if (prevChartPath) {
-            const prevoutFileName = '/tmp/thirdPartyHelm.yaml';
-            const prevoutStream = fs.createWriteStream(prevoutFileName);
-            await syncSpawn('helm', `template --name hkube --set global.production=${production} ${prevChartPath}`, undefined, { stdout: prevoutStream });
-            let prevfileContents = fs.readFileSync(prevoutFileName, 'utf8');
-            prevfileContents = prevfileContents.replace(/^---(?!$)/gm, '---\r\n')
-            prevYml = jsyaml.safeLoadAll(prevfileContents);
+            prevYml = await _getYamlsFromChartsFolder(prevChartPath,options);
         }
         const imagesNew = _getThirdpartyVersions(yml, registry);
         const prevImages = _getThirdpartyVersions(prevYml, registry);

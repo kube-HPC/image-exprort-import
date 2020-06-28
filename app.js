@@ -48,11 +48,9 @@ const options = {
             alias: 'r',
             default: ''
         },
-        production: {
-            default: true
-        },
-        dryrun: {
-            alias: 'd',
+        options: {
+            default: '',
+            describe: 'comma delimited key-value pairs to add to the helm cmd --set option'
         }
     }
 
@@ -62,7 +60,7 @@ yargs
     .command('load', 'load Data To Regsitry', options.loadDataToRegsitry,
         (argv) => loadToRegistry(argv.path, argv.registry))
     .command('exportThirdparty', 'exports thirdparty containers from regsitry', options.exportThirdParty,
-        (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry, argv.production, argv.prevChartPath, argv.dryrun))
+        (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry, argv.options, argv.prevChartPath))
     .command('export', 'exports containers from regsitry', options.exportFromRegistry,
         (argv) => exportFromRegistry(argv.path, argv.semver, argv.registry, argv.prevVersion, argv.dryrun))
     .help().argv

@@ -39,7 +39,7 @@ const coreImages = [
             repository:'adoptopenjdk/openjdk11',
             tag:'latest'
         },
-        name: 'node14'
+        name: 'java'
     }
 ]
 module.exports={

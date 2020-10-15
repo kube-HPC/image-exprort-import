@@ -6,7 +6,7 @@
   "bin": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\"",
-    "build": "./node_modules/.bin/pkg app.js --targets=linux -o image-export-import"
+    "build": "./node_modules/.bin/pkg app.js --targets=node10-linux -o image-export-import"
   },
   "keywords": [],
   "author": "",

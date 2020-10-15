@@ -37,9 +37,16 @@ const coreImages = [
     {
         image:{
             repository:'adoptopenjdk/openjdk11',
-            tag:'latest'
+            tag:'jre-11.0.8_10-ubuntu'
         },
         name: 'java'
+    },
+    {
+        image:{
+            repository:'maven',
+            tag:'3.6.3-openjdk-11-slim'
+        },
+        name: 'maven'
     }
 ]
 module.exports={

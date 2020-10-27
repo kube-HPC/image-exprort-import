@@ -36,7 +36,7 @@ const coreImages = [
     },
     {
         image:{
-            repository:'adoptopenjdk/openjdk11',
+            repository:'hkube/openjdk11',
             tag:'jre-11.0.8_10-ubuntu'
         },
         name: 'java'

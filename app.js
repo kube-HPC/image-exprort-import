@@ -2,7 +2,7 @@
 
 const yargs = require('yargs')
 const { loadToRegistry } = require('./loadToRegistry');
-const { exportFromRegistry, exportThirdparty } = require('./exportFromRegistry')
+const { exportFromRegistry, exportThirdparty, createScript } = require('./exportFromRegistry')
 const options = {
     loadDataToRegsitry: {
         path: {
@@ -23,7 +23,7 @@ const options = {
             alias: 'v',
             describe: 'provide a path to versions file'
         },
-        prevVersion:{
+        prevVersion: {
             describe: 'path to previous versions file for diff'
         },
         registry: {
@@ -41,8 +41,25 @@ const options = {
         chartPath: {
             describe: 'provide a path to thirdparty chart path'
         },
-        prevChartPath:{
+        prevChartPath: {
             describe: 'path to previous versions file for diff'
+        },
+        registry: {
+            alias: 'r',
+            default: ''
+        },
+        options: {
+            default: '',
+            describe: 'comma delimited key-value pairs to add to the helm cmd --set option'
+        }
+    },
+    createScript: {
+        path: {
+            alias: 'p',
+            describe: 'path to write dockers'
+        },
+        chartPath: {
+            describe: 'provide a path to the chart path'
         },
         registry: {
             alias: 'r',
@@ -57,12 +74,14 @@ const options = {
 }
 
 yargs
-    .command('load', 'load Data To Regsitry', options.loadDataToRegsitry,
+    .command('load', 'load data To registry', options.loadDataToRegsitry,
         (argv) => loadToRegistry(argv.path, argv.registry))
-    .command('exportThirdparty', 'exports thirdparty containers from regsitry', options.exportThirdParty,
+    .command('exportThirdparty', 'exports thirdparty containers from registry', options.exportThirdParty,
         (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry, argv.options, argv.prevChartPath))
-    .command('export', 'exports containers from regsitry', options.exportFromRegistry,
+    .command('export', 'exports containers from registry', options.exportFromRegistry,
         (argv) => exportFromRegistry(argv.path, argv.semver, argv.registry, argv.prevVersion, argv.dryrun))
+    .command('createScript', 'create download script', options.createScript,
+        (argv) => createScript(argv))
     .help().argv
 
 

@@ -9,6 +9,7 @@ const merge = require('lodash.merge');
 const uniqBy = require('lodash.uniqby');
 const { coreImages } = require('./images');
 const docker = new Docker();
+const scriptTemplate = require('./templates/saveImages');
 const _createImageName = ({ registry, namespace, repository, tag }, ignoreTag) => {
     let array = [registry, namespace, repository];
     array = array.filter(a => a);
@@ -50,7 +51,8 @@ const _parseImageName = (image) => {
     return result
 }
 
-const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersionsFile, dryrun = false) => {
+const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersionsFile, dryrun = false, saveDockers = true) => {
+    const imageNames=[];
     const fileContents = fs.readFileSync(versionsFile, 'utf8');
     const versions = jsyaml.loadAll(fileContents);
     let prevVersions = null;
@@ -64,7 +66,9 @@ const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersion
     if (prevVersions) {
         console.log(`Comparing to version ${prevVersions[0].systemversion}`)
     }
-    await fs.mkdirp(`${outFolder}/${versions[0].systemversion}`);
+    if (saveDockers){
+        await fs.mkdirp(`${outFolder}/${versions[0].systemversion}`);
+    }
     let images = Object.entries(versions[0]).filter(([k, v]) => v.image).map(([k, v]) => ({ name: k, image: v.image }));
     images = images.concat(...coreImages)
     let counter = images.length + 1;
@@ -88,22 +92,25 @@ const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersion
                 console.log(`gzip ${outFolder}/${versions[0].systemversion}/${fileName}.tar`)
             }
             else {
-
-                await docker.command(`pull ${fullImageName}`)
-                await docker.command(`save -o ${outFolder}/${versions[0].systemversion}/${fileName}.tar ${fullImageName}`)
-                await syncSpawn('gzip', `${outFolder}/${versions[0].systemversion}/${fileName}.tar`);
-                console.log(JSON.stringify({
-                    file: `${fileName}.tar`,
-                    ...(image.image)
-                }))
+                if (saveDockers){
+                    await docker.command(`pull ${fullImageName}`)
+                    await docker.command(`save -o ${outFolder}/${versions[0].systemversion}/${fileName}.tar ${fullImageName}`)
+                    await syncSpawn('gzip', `${outFolder}/${versions[0].systemversion}/${fileName}.tar`);
+                    console.log(JSON.stringify({
+                        file: `${fileName}.tar`,
+                        ...(image.image)
+                    }))
+                }
                 counter = counter - 1;
                 console.log(`finish ${fullImageName} ${i}/${images.length} left ${counter}`)
             }
+            imageNames.push(fullImageName);
         } catch (error) {
             console.log(error)
             counter = counter - 1;
         }
     })
+    return imageNames;
 }
 
 const _getThirdpartyVersions = (yml, registry) => {
@@ -211,7 +218,7 @@ const _getYamlFromChart = async (helmChartFolder, options) => {
     }
 };
 
-const _getYamlsFromChartsFolder = async (helmChartFolder, options) =>{
+const _getYamlsFromChartsFolder = async (helmChartFolder, options) => {
     const chartsFolder = path.join(helmChartFolder, 'charts');
     const thirdpartyFolders = await fs.readdir(chartsFolder);
     const yamls = await Promise.all(thirdpartyFolders.map(f => _getYamlFromChart(path.join(chartsFolder, f), options)));
@@ -219,12 +226,13 @@ const _getYamlsFromChartsFolder = async (helmChartFolder, options) =>{
     return yml;
 };
 
-const exportThirdparty = async (outFolder, helmChartFolder, registry, options = '', prevChartPath = null) => {
+const exportThirdparty = async (outFolder, helmChartFolder, registry, options = '', prevChartPath = null, saveDockers = true) => {
+    const imagesNames = [];
     try {
-        const yml = await _getYamlsFromChartsFolder(helmChartFolder,options);
+        const yml = await _getYamlsFromChartsFolder(helmChartFolder, options);
         let prevYml = null;
         if (prevChartPath) {
-            prevYml = await _getYamlsFromChartsFolder(prevChartPath,options);
+            prevYml = await _getYamlsFromChartsFolder(prevChartPath, options);
         }
         const imagesNew = _getThirdpartyVersions(yml, registry);
         const prevImages = _getThirdpartyVersions(prevYml, registry);
@@ -233,18 +241,22 @@ const exportThirdparty = async (outFolder, helmChartFolder, registry, options = 
         images.forEach(i => console.log(`found ${i.fullname}`));
         skippedImages.forEach(i => console.log(`skipped ${i.fullname}`));
 
-        await fs.mkdirp(`${outFolder}/thirdparty`);
-
+        if (saveDockers) {
+            await fs.mkdirp(`${outFolder}/thirdparty`);
+        }
         let counter = images.length + 1;
         images.forEach(async (image, i) => {
             try {
                 const fullImageName = image.fullImageName;
 
                 console.log(`starts ${fullImageName} ${i}/${images.length}`)
-                const fileName = fullImageName.replace(/[\/:]/gi, '_')
-                await docker.command(`pull ${fullImageName}`)
-                await docker.command(`save -o ${outFolder}/thirdparty/${fileName}.tar ${fullImageName}`)
-                await syncSpawn('gzip', `${outFolder}/thirdparty/${fileName}.tar`);
+                if (saveDockers) {
+                    const fileName = fullImageName.replace(/[\/:]/gi, '_')
+                    await docker.command(`pull ${fullImageName}`)
+                    await docker.command(`save -o ${outFolder}/thirdparty/${fileName}.tar ${fullImageName}`)
+                    await syncSpawn('gzip', `${outFolder}/thirdparty/${fileName}.tar`);
+                }
+                imagesNames.push(fullImageName);
                 counter = counter - 1;
                 console.log(`finish ${fullImageName} ${i}/${images.length} left ${counter}`)
             } catch (error) {
@@ -255,27 +267,22 @@ const exportThirdparty = async (outFolder, helmChartFolder, registry, options = 
     } catch (error) {
         console.log(error)
     }
+    return imagesNames
+}
+
+const createScript = async ({ path: outFile, chartPath: helmChartFolder, registry, options = '' }) => {
+    const thirdpartyImages = await exportThirdparty('', helmChartFolder, registry, options, null, false);
+    const hkubeImages = await exportFromRegistry('', path.join(helmChartFolder, 'values.yaml'), registry, null, false, false)
+    const script=scriptTemplate(hkubeImages.join('\n'),thirdpartyImages.join('\n'));
+    // const script=scriptTemplate('busybox:latest\nbusybox:1.28.0-glibc','');
+
+    await fs.writeFile(outFile, script);
+    await fs.chmod(outFile, '0775')
+
 }
 
 module.exports = {
     exportFromRegistry,
-    exportThirdparty
+    exportThirdparty,
+    createScript
 };
-    //   imageList.push({
-    //     file: `${fileName}.tar`,
-    //     ...(v.image)
-    // })
-    // for(v of images) {
-    //     const fullImageName = createImageName(v.image);
-    //     const fileName = fullImageName.replace(/[\/:]/gi, '_')
-
-    //     await syncSpawn(`docker`, `pull ${fullImageName}`)
-    //     await syncSpawn(`docker`, `save -o ${outFolder}/${versions[0].systemversion}/${fileName}.tar ${fullImageName}`)
-    //     imageList.push({
-    //         file: `${fileName}.tar`,
-    //         ...(v.image)
-    //     })
-    // }
-
-    //console.log(imageList)
-

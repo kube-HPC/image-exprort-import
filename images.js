@@ -60,7 +60,7 @@ const coreImages = [
             repository: 'fluent/fluent-bit',
             tag: '1.8.3'
         },
-        name: fluentbit
+        name: 'fluentbit'
     }
 ]
 module.exports = {

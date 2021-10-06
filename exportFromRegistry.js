@@ -274,8 +274,27 @@ const createScript = async ({ path: outFile, chartPath: helmChartFolder, registr
     const thirdpartyImages = await exportThirdparty('', helmChartFolder, registry, options, null, false);
     const hkubeImages = await exportFromRegistry('', path.join(helmChartFolder, 'values.yaml'), registry, null, false, false)
     const script=scriptTemplate(hkubeImages.join('\n'),thirdpartyImages.join('\n'));
-    // const script=scriptTemplate('busybox:latest\nbusybox:1.28.0-glibc','');
 
+    await fs.writeFile(outFile, script);
+    await fs.chmod(outFile, '0775')
+
+}
+
+const createPatterns = async ({ path: outFile, chartPath: helmChartFolder, registry, options = '', patternPrefix='' }) => {
+    const thirdpartyImages = await exportThirdparty('', helmChartFolder, registry, options, null, false);
+    const hkubeImages = await exportFromRegistry('', path.join(helmChartFolder, 'values.yaml'), registry, null, false, false)
+    const files = [];
+    for (let image of hkubeImages.concat(thirdpartyImages)) {
+        const imageParsed = _parseImageName(image)
+        const imageLine = image.replace(':','/')
+        files.push({
+            pattern: `${patternPrefix}/${imageLine}/`
+        })
+        files.push({
+            pattern: `${patternPrefix}/*/${imageLine}/`
+        })
+    }
+    const script = JSON.stringify({files}, null, 2);
     await fs.writeFile(outFile, script);
     await fs.chmod(outFile, '0775')
 
@@ -284,5 +303,6 @@ const createScript = async ({ path: outFile, chartPath: helmChartFolder, registr
 module.exports = {
     exportFromRegistry,
     exportThirdparty,
-    createScript
+    createScript,
+    createPatterns
 };

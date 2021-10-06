@@ -2,7 +2,7 @@
 
 const yargs = require('yargs')
 const { loadToRegistry } = require('./loadToRegistry');
-const { exportFromRegistry, exportThirdparty, createScript } = require('./exportFromRegistry')
+const { exportFromRegistry, exportThirdparty, createScript, createPatterns } = require('./exportFromRegistry')
 const options = {
     loadDataToRegsitry: {
         path: {
@@ -69,6 +69,27 @@ const options = {
             default: '',
             describe: 'comma delimited key-value pairs to add to the helm cmd --set option'
         }
+    },
+    createPatterns: {
+        path: {
+            alias: 'p',
+            describe: 'path to write dockers'
+        },
+        chartPath: {
+            describe: 'provide a path to the chart path'
+        },
+        registry: {
+            alias: 'r',
+            default: ''
+        },
+        options: {
+            default: '',
+            describe: 'comma delimited key-value pairs to add to the helm cmd --set option'
+        },
+        patternPrefix: {
+            default: '',
+            description: 'docker repository name inside registry'
+        }
     }
 
 }
@@ -80,8 +101,8 @@ yargs
         (argv) => exportThirdparty(argv.path, argv.chartPath, argv.registry, argv.options, argv.prevChartPath))
     .command('export', 'exports containers from registry', options.exportFromRegistry,
         (argv) => exportFromRegistry(argv.path, argv.semver, argv.registry, argv.prevVersion, argv.dryrun))
-    .command('createScript', 'create download script', options.createScript,
-        (argv) => createScript(argv))
+    .command('createScript', 'create download script', options.createScript, (argv) => createScript(argv))
+    .command('createPatterns', 'create release bundle file patterns', options.createPatterns, (argv) => createPatterns(argv))
     .help().argv
 
 

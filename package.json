@@ -1,6 +1,6 @@
 {
   "name": "image-export-import",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "",
   "main": "app.js",
   "bin": "app.js",

@@ -72,7 +72,9 @@ const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersion
     let images = Object.entries(versions[0]).filter(([k, v]) => v.image).map(([k, v]) => ({ name: k, image: v.image }));
     images = images.concat(...coreImages)
     let counter = images.length + 1;
-    images.forEach(async (image, i) => {
+    let i=0;
+    for (let image of images) {
+        i++
         try {
             if (prevVersions && prevVersions[0]) {
                 const prev = prevVersions[0][image.name];
@@ -109,7 +111,7 @@ const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersion
             console.log(error)
             counter = counter - 1;
         }
-    })
+    }
     return imageNames;
 }
 
@@ -245,7 +247,9 @@ const exportThirdparty = async (outFolder, helmChartFolder, registry, options = 
             await fs.mkdirp(`${outFolder}/thirdparty`);
         }
         let counter = images.length + 1;
-        images.forEach(async (image, i) => {
+        let i=0;
+        for (let image of images) {
+            i++
             try {
                 const fullImageName = image.fullImageName;
 
@@ -263,7 +267,7 @@ const exportThirdparty = async (outFolder, helmChartFolder, registry, options = 
                 console.log(error)
                 counter = counter - 1;
             }
-        })
+        }
     } catch (error) {
         console.log(error)
     }

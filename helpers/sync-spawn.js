@@ -24,6 +24,9 @@ const _spawn = async (command, args, options, { stdout, stderr } = {}) => {
         console.log(`( ${command} ${args} ) spawn closed with code ${code}`.yellow);
         sema.callDone()
     });
+    if (stdout && !stdout.writableFinished) {
+        await new Promise(fulfill => {stdout.on("finish", fulfill)});
+    }
     await sema.done();
 }
 

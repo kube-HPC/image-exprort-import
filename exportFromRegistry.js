@@ -21,20 +21,20 @@ const _createImageName = ({ registry, namespace, repository, tag }, ignoreTag) =
 }
 
 const _parseImageName = (image) => {
-    var match = image.match(/^(?:([^\/]+)\/)?(?:([^\/]+)\/)?([^@:\/]+)(?:[@:](.+))?$/)
+    const match = image.match(/^(?:([^\/]+)\/)?(?:([^\/]+)\/)?([^@:\/]+)(?:[@:](.+))?$/)
     if (!match) return null
 
-    var registry = match[1]
-    var namespace = match[2]
-    var repository = match[3]
-    var tag = match[4]
+    let registry = match[1]
+    let namespace = match[2]
+    let repository = match[3]
+    let tag = match[4]
 
     if (!namespace && registry && !/[:.]/.test(registry)) {
         namespace = registry
         registry = null
     }
-
-    var result = {
+    
+    const result = {
         registry: registry || null,
         namespace: namespace || null,
         repository: repository,
@@ -290,7 +290,7 @@ const createPatterns = async ({ path: outFile, chartPath: helmChartFolder, regis
     const files = [];
     for (let image of hkubeImages.concat(thirdpartyImages)) {
         const imageParsed = _parseImageName(image)
-        const imageLine = image.replace(':','/')
+        const imageLine = image.replace(':','/').replace('docker.io/','')
         files.push({
             pattern: `${patternPrefix}/${imageLine}/`
         })

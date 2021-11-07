@@ -81,7 +81,7 @@ const exportFromRegistry = async (outFolder, versionsFile, registry, prevVersion
                 if (prev) {
                     if (prev.image.repository === image.image.repository && prev.image.tag === image.image.tag) {
                         console.log(`skipping ${image.name} as its version ${image.image.tag} has not changed`)
-                        return;
+                        continue;
                     }
                 }
             }

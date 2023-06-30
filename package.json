@@ -15,7 +15,7 @@
     "await-delay": "^1.0.0",
     "await-done": "^1.0.10",
     "colors": "^1.4.0",
-    "docker-cli-js": "^2.7.1",
+    "docker-cli-js": "^2.10.0",
     "fs-extra": "^8.1.0",
     "js-yaml": "^3.14.0",
     "lodash.merge": "^4.6.2",

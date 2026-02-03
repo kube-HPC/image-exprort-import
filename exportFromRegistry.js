@@ -237,6 +237,30 @@ const exportThirdparty = async (outFolder, helmChartFolder, registry, options = 
             prevYml = await _getYamlsFromChartsFolder(prevChartPath, options);
         }
         const imagesNew = _getThirdpartyVersions(yml, registry);
+        imagesNew.forEach(img => {
+            if (img.fullImageName.includes('bitnami/mongodb')) {
+                const versionMatch = img.fullImageName.match(/:(\d+\.\d+\.\d+)/);
+                const version = versionMatch ? versionMatch[1] : '4.4.1'; // fallback version
+                
+                const newName = `docker.io/bitnamilegacy/mongodb:${version}`;
+                console.log(`[PATCH] MongoDB: ${img.fullImageName} -> ${newName}`);
+                img.fullImageName = newName;
+                img.fullname = newName;
+            } 
+            else if (img.fullImageName.includes('bitnami/postgresql')) {
+                const versionMatch = img.fullImageName.match(/:(\d+\.\d+\.\d+)/);
+                const version = versionMatch ? versionMatch[1] : '11.9.0'; // fallback version
+
+                const newName = `docker.io/bitnamilegacy/postgresql:${version}`;
+                console.log(`[PATCH] PostgreSQL: ${img.fullImageName} -> ${newName}`);
+                img.fullImageName = newName;
+                img.fullname = newName;
+            }
+            else if (img.fullImageName.includes('bitnami/')) {
+                img.fullImageName = img.fullImageName.replace('bitnami/', 'bitnamilegacy/');
+                img.fullname = img.fullname.replace('bitnami/', 'bitnamilegacy/');
+            }
+        });
         const prevImages = _getThirdpartyVersions(prevYml, registry);
         const images = imagesNew.filter(i => !prevImages.find(pi => i.fullname === pi.fullname));
         const skippedImages = imagesNew.filter(i => prevImages.find(pi => i.fullname === pi.fullname));

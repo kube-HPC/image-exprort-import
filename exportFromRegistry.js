@@ -243,7 +243,6 @@ const exportThirdparty = async (outFolder, helmChartFolder, registry, options = 
                 const version = versionMatch ? versionMatch[1] : '4.4.1'; // fallback version
                 
                 const newName = `docker.io/bitnamilegacy/mongodb:${version}`;
-                console.log(`[PATCH] MongoDB: ${img.fullImageName} -> ${newName}`);
                 img.fullImageName = newName;
                 img.fullname = newName;
             } 
@@ -252,7 +251,6 @@ const exportThirdparty = async (outFolder, helmChartFolder, registry, options = 
                 const version = versionMatch ? versionMatch[1] : '11.9.0'; // fallback version
 
                 const newName = `docker.io/bitnamilegacy/postgresql:${version}`;
-                console.log(`[PATCH] PostgreSQL: ${img.fullImageName} -> ${newName}`);
                 img.fullImageName = newName;
                 img.fullname = newName;
             }
